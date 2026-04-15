@@ -318,6 +318,6 @@
         };
     in
     {
-      nixosConfigurations.host = mkHost host;
+      nixosConfigurations.${host.name} = mkHost host;
     };
 }
