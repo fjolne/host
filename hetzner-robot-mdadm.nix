@@ -1,11 +1,11 @@
 { diskDevices, lib, config, pkgs, ... }:
 
 let
-  cfg = config.hetzner.mdadm;
+  cfg = config.hetzner."robot-mdadm";
 in
 {
   options = {
-    hetzner.mdadm = {
+    hetzner."robot-mdadm" = {
       level = lib.mkOption {
         type = lib.types.enum [ 0 1 10 5 6 7 ];
         default = 0;

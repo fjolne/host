@@ -10,12 +10,21 @@
 
   outputs = { nixpkgs, nixpkgs-unstable, ... }@inputs:
     let
-      system = "x86_64-linux";
       host = {
         name = "FIXME";
+        system = "x86_64-linux";
         hostId = "FIXME"; # generate with: openssl rand -hex 4
         ipv6 = "FIXME";
-        diskDevices = [ "/dev/nvme0n1" "/dev/nvme1n1" ];
+        isCloud = true;
+        isArm = false;
+        diskDevices = [ "/dev/sda" ];
+        diskConfiguration = ./hetzner-cloud-ext4.nix;
+        diskOptions = {
+          hetzner.cloud-ext4 = {
+            mountOptions = [ ];
+            journalMode = "data=ordered";
+          };
+        };
         adminUser = {
           name = "FIXME";
           initialPassword = "change-me";
@@ -24,18 +33,32 @@
             "FIXME"
           ];
         };
-        mdadm = {
-          level = 0;
-          fs = "ext4";
-        };
       };
 
-      pkgs-unstable = import nixpkgs-unstable {
-        inherit system;
-        config = {
-          allowUnfree = true;
-        };
-      };
+      # host = {
+      #   name = "FIXME";
+      #   system = "x86_64-linux";
+      #   hostId = "FIXME"; # generate with: openssl rand -hex 4
+      #   ipv6 = "FIXME";
+      #   isCloud = false;
+      #   isArm = false;
+      #   diskDevices = [ "/dev/nvme0n1" "/dev/nvme1n1" ];
+      #   diskConfiguration = ./hetzner-robot-mdadm.nix;
+      #   diskOptions = {
+      #     hetzner."robot-mdadm" = {
+      #       level = 0;
+      #       fs = "ext4";
+      #     };
+      #   };
+      #   adminUser = {
+      #     name = "FIXME";
+      #     initialPassword = "change-me";
+      #     extraGroups = [ "wheel" "docker" "systemd-journal" ];
+      #     authorizedKeys = [
+      #       "FIXME"
+      #     ];
+      #   };
+      # };
 
       baseModule =
         { lib
@@ -188,16 +211,26 @@
 
       mkHost =
         { name
+        , system
         , hostId
         , ipv6
         , diskDevices
         , adminUser
         , isCloud ? false
         , isArm ? false
-        , mdadm ? null
+        , diskConfiguration
+        , diskOptions ? { }
         , extraModules ? [ ]
         ,
         }:
+        let
+          pkgs-unstable = import nixpkgs-unstable {
+            inherit system;
+            config = {
+              allowUnfree = true;
+            };
+          };
+        in
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = {
@@ -207,12 +240,12 @@
             pkgs-unstable = pkgs-unstable;
           };
           modules =
-            [ baseModule ]
-            ++ nixpkgs.lib.optional (mdadm != null) ./disk-configuration.nix
-            ++ extraModules
-            ++ nixpkgs.lib.optional (mdadm != null) {
-              hetzner.mdadm = mdadm;
-            };
+            [
+              baseModule
+              diskConfiguration
+              diskOptions
+            ]
+            ++ extraModules;
         };
     in
     {
